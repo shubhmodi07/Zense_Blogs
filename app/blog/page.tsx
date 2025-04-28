@@ -10,22 +10,42 @@ import BlogHeader from '@/components/blog/BlogHeader';
 import FeaturedPostsCarousel from '@/components/blog/FeaturedPostsCarousel';
 import PostCard from '@/components/blog/PostCard';
 import BlogNewsletter from '@/components/blog/BlogNewsletter';
-import { BLOG_POSTS } from '@/lib/blog-data';
+import { useEffect } from 'react';
+import { BlogPost } from '@/lib/blog-types';
 
 export default function BlogPage() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
+
+  useEffect(() => {
+    const fetchBlogPosts = async () => {
+      try {
+        const response = await fetch('/app/api/blogs');
+        if (response.ok) {
+          const data = await response.json();
+          setBlogPosts(data);
+        } else {
+          console.error('Failed to fetch blog posts');
+        }
+      } catch (error) {
+        console.error('Error fetching blog posts:', error);
+      }
+    };
+
+    fetchBlogPosts();
+  }, []);
   
-  const filteredPosts = BLOG_POSTS.filter(post => 
-    post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    post.excerpt.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    post.categories.some(category => 
+  const filteredPosts = blogPosts.filter(post => 
+    post.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    post.excerpt?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    post.categories?.some(category => 
       category.toLowerCase().includes(searchQuery.toLowerCase())
     )
   );
 
   // Get featured posts (first 3 posts from each category)
-  const featuredPosts = Array.from(new Set(BLOG_POSTS.flatMap(post => post.categories)))
-    .map(category => BLOG_POSTS.find(post => post.categories.includes(category)))
+  const featuredPosts = Array.from(new Set(blogPosts.flatMap(post => post.categories)))
+    .map(category => blogPosts.find(post => post.categories.includes(category)))
     .filter((post): post is NonNullable<typeof post> => post !== undefined)
     .slice(0, 3);
 
@@ -93,7 +113,7 @@ export default function BlogPage() {
             <TabsContent key={category} value={category} className="mt-8">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {(category === 'All' ? regularPosts : regularPosts.filter(post => 
-                  post.categories.includes(category)
+                  post.categories?.includes(category)
                 )).map((post) => (
                   <PostCard key={post.slug} post={post} />
                 ))}
