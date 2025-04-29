@@ -16,11 +16,11 @@ export default function PostCard({ post }: PostCardProps) {
   return (
     <Card className="overflow-hidden h-full flex flex-col transform transition duration-300 hover:shadow-md hover:-translate-y-1">
       <Link 
-        href={`/blog/${post.slug}`} 
+        href={`/blog/${post.id}`}
         className="relative w-full h-48 block overflow-hidden"
       >
-        <Image 
-          src={post.coverImage} 
+        <Image
+          src={post.coverImage}
           alt={post.title}
           fill
           className="object-cover transition-transform duration-500 hover:scale-105"
@@ -29,20 +29,15 @@ export default function PostCard({ post }: PostCardProps) {
       
       <CardContent className="pt-5 px-5 flex-grow">
         <div className="flex flex-wrap gap-2 mb-3">
-          {post.categories.slice(0, 2).map(category => (
-            <Badge key={category} variant="secondary" className="text-xs">
-              {category}
-            </Badge>
-          ))}
-          {post.categories.length > 2 && (
-            <Badge variant="outline" className="text-xs">
-              +{post.categories.length - 2}
+          {post.category && ( // Check if category exists
+            <Badge key={post.category} variant="secondary" className="text-xs">
+              {post.category}
             </Badge>
           )}
         </div>
         
         <h3 className="text-xl font-bold mb-3 transition-colors hover:text-primary line-clamp-2">
-          <Link href={`/blog/${post.slug}`}>
+          <Link href={`/blog/${post.id}`}>
             {post.title}
           </Link>
         </h3>
@@ -55,11 +50,11 @@ export default function PostCard({ post }: PostCardProps) {
       <CardFooter className="px-5 pt-0 pb-5 flex flex-col items-start gap-4">
         <div className="flex items-center space-x-3">
           <Avatar className="h-8 w-8">
-            <AvatarImage src={post.author.image} alt={post.author.name} />
-            <AvatarFallback>{post.author.name.charAt(0)}</AvatarFallback>
+            <AvatarImage src={post.authorImage} alt={post.authorName} />
+            <AvatarFallback>{post.authorName.charAt(0)}</AvatarFallback>
           </Avatar>
           <div className="text-sm">
-            <p className="font-medium">{post.author.name}</p>
+            <p className="font-medium">{post.authorName}</p>
             <div className="flex items-center text-xs text-muted-foreground">
               <Calendar className="mr-1 h-3 w-3" />
               <time dateTime={post.date}>{new Date(post.date).toLocaleDateString('en-US', {
@@ -79,7 +74,7 @@ export default function PostCard({ post }: PostCardProps) {
           variant="ghost" 
           className="p-0 h-auto font-medium hover:bg-transparent hover:text-primary group"
         >
-          <Link href={`/blog/${post.slug}`}>
+          <Link href={`/blog/${post.id}`}>
             Read more
             <ArrowRight className="ml-1 h-4 w-4 group-hover:translate-x-1 transition-transform" />
           </Link>

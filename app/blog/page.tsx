@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowRight, Search } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -10,22 +10,22 @@ import BlogHeader from '@/components/blog/BlogHeader';
 import FeaturedPostsCarousel from '@/components/blog/FeaturedPostsCarousel';
 import PostCard from '@/components/blog/PostCard';
 import BlogNewsletter from '@/components/blog/BlogNewsletter';
-import { useEffect } from 'react';
 import { BlogPost } from '@/lib/blog-types';
 
 export default function BlogPage() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [blogPosts, setBlogPosts] = useState<(BlogPost & { id: string })[]>([]);
+  const [displayedPosts, setDisplayedPosts] = useState<(BlogPost & { id: string })[]>([]);
 
   useEffect(() => {
     const fetchBlogPosts = async () => {
       try {
-        const response = await fetch('/app/api/blogs');
+        const response = await fetch('/api/blogs');
         if (response.ok) {
-          const data = await response.json();
+          const data: (BlogPost & { id: string })[] = await response.json();
           setBlogPosts(data);
         } else {
-          console.error('Failed to fetch blog posts');
+          console.error('Failed to fetch blog posts from API');
         }
       } catch (error) {
         console.error('Error fetching blog posts:', error);
@@ -34,23 +34,18 @@ export default function BlogPage() {
 
     fetchBlogPosts();
   }, []);
-  
-  const filteredPosts = blogPosts.filter(post => 
-    post.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    post.excerpt?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    post.categories?.some(category => 
-      category.toLowerCase().includes(searchQuery.toLowerCase())
-    )
-  );
 
-  // Get featured posts (first 3 posts from each category)
-  const featuredPosts = Array.from(new Set(blogPosts.flatMap(post => post.categories)))
-    .map(category => blogPosts.find(post => post.categories.includes(category)))
-    .filter((post): post is NonNullable<typeof post> => post !== undefined)
-    .slice(0, 3);
+  useEffect(() => {
+    const filtered = blogPosts.filter(post =>
+      post.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      post.excerpt?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      post.category?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    setDisplayedPosts(filtered);
+  }, [blogPosts, searchQuery]);
 
-  const regularPosts = filteredPosts.filter(post => !featuredPosts.includes(post));
-  
+  const featuredPosts = blogPosts.slice(0, 3);
+
   const categories = [
     'All',
     'Health',
@@ -109,28 +104,30 @@ export default function BlogPage() {
             </TabsList>
           </div>
           
-          {categories.map((category) => (
-            <TabsContent key={category} value={category} className="mt-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {(category === 'All' ? regularPosts : regularPosts.filter(post => 
-                  post.categories?.includes(category)
-                )).map((post) => (
-                  <PostCard key={post.slug} post={post} />
-                ))}
-              </div>
-              
-              {(category === 'All' ? regularPosts : regularPosts.filter(post => 
-                post.categories.includes(category)
-              )).length === 0 && (
-                <div className="text-center py-16">
-                  <h3 className="text-xl font-medium">No posts found</h3>
-                  <p className="text-muted-foreground mt-2">
-                    Try adjusting your search or filter to find what you're looking for.
-                  </p>
+          {categories.map((category) => {
+            const currentPosts = category === 'All'
+              ? displayedPosts
+              : displayedPosts.filter(post => post.category?.trim().toLowerCase() === category.trim().toLowerCase());
+            
+            return (
+              <TabsContent key={category} value={category} className="mt-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {currentPosts.map((post) => (
+                    <PostCard key={post.id} post={post} />
+                  ))}
                 </div>
-              )}
-            </TabsContent>
-          ))}
+
+                {currentPosts.length === 0 && (
+                  <div className="text-center py-16">
+                    <h3 className="text-xl font-medium">No posts found</h3>
+                    <p className="text-muted-foreground mt-2">
+                      Try adjusting your search or filter to find what you're looking for.
+                    </p>
+                  </div>
+                )}
+              </TabsContent>
+            );
+          })}
         </Tabs>
 
         <div className="mt-16 text-center">

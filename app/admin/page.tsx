@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { Calendar, Upload } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -16,22 +16,18 @@ import {
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import BlogHeader from '@/components/blog/BlogHeader';
-import { useId } from 'react';
 
 export default function AdminPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const id = useId();
   const [formData, setFormData] = useState({
-    id,
     title: '',
     content: '',
     excerpt: '',
-    coverImage: '',
+    coverImage: null as File | null, // Change to File | null for file upload
     category: '',
     authorName: '',
     authorImage: '',
-    authorBio: '',
     date: new Date().toISOString().split('T')[0],
   });
 
@@ -51,43 +47,52 @@ export default function AdminPage() {
     setIsSubmitting(true);
 
     try {
-      const formDataToSend = new FormData();
-      formDataToSend.append('id', formData.id);
-      formDataToSend.append('title', formData.title);
-      formDataToSend.append('content', formData.content);
-      formDataToSend.append('excerpt', formData.excerpt);
-      formDataToSend.append('coverImage', formData.coverImage);
-      formDataToSend.append('category', formData.category);
-      formDataToSend.append('authorName', formData.authorName);
-      formDataToSend.append('authorImage', formData.authorImage);
-      formDataToSend.append('authorBio', formData.authorBio);
-      formDataToSend.append('date', formData.date);
+      const data = new FormData();
+      data.append('title', formData.title);
+      data.append('content', formData.content);
+      data.append('excerpt', formData.excerpt);
+      if (formData.coverImage) {
+        data.append('coverImage', formData.coverImage);
+      }
+      data.append('category', formData.category);
+      data.append('authorName', formData.authorName);
+      data.append('authorImage', formData.authorImage);
+      data.append('date', formData.date);
 
-      const response = await fetch('/app/api/blogs', {
+
+      const uploadResponse = await fetch('/api/upload-image', {
         method: 'POST',
-        body: formDataToSend,
+        body: data,
       });
 
-      if (response.ok) {
-        // Reset form after successful submission
-        setFormData({
-          id: useId(),
-          title: '',
-          content: '',
-          excerpt: '',
-          coverImage: '',
-          category: '',
-          authorName: '',
-          authorImage: '',
-          authorBio: '',
-          date: new Date().toISOString().split('T')[0],
-        });
-        
-        // Show success message or redirect
+      if (!uploadResponse.ok) {
+        const errorData = await uploadResponse.json();
+        alert(`Failed to upload image: ${errorData.message || 'Unknown error'}`);
+        setIsSubmitting(false);
+        return;
+      }
+
+      const uploadResult = await uploadResponse.json();
+      const imageUrl = uploadResult.filename; // Assuming the backend returns the filename or URL
+
+      // Now submit the blog post data with the image URL
+      const blogPostResponse = await fetch('/api/blogs', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...formData,
+          coverImage: imageUrl, // Use the uploaded image URL
+        }),
+      });
+
+
+      if (blogPostResponse.ok) {
         alert('Blog post created successfully!');
         router.push('/blog');
       } else {
-        const errorData = await response.json();
+        const errorData = await blogPostResponse.json();
         alert(`Failed to create blog post: ${errorData.message || 'Unknown error'}`);
       }
     } catch (error) {
@@ -98,21 +103,29 @@ export default function AdminPage() {
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value, type } = e.target;
+
+    if (type === 'file') {
+      const files = (e.target as HTMLInputElement).files;
+      if (files && files.length > 0) {
+        setFormData(prev => ({ ...prev, [name]: files[0] }));
+      }
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
   };
 
   return (
     <div className="min-h-screen bg-background">
       <BlogHeader />
-      
+
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <Card className="max-w-4xl mx-auto">
           <CardHeader>
             <CardTitle className="text-3xl">Create New Blog Post</CardTitle>
           </CardHeader>
-          
+
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
@@ -154,13 +167,12 @@ export default function AdminPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="coverImage">Cover Image URL</Label>
+                  <Label htmlFor="coverImage">Cover Image</Label>
                   <Input
                     id="coverImage"
                     name="coverImage"
-                    value={formData.coverImage}
+                    type="file" // Change input type to file
                     onChange={handleChange}
-                    placeholder="Enter image URL"
                     required
                   />
                 </div>
@@ -169,13 +181,15 @@ export default function AdminPage() {
                   <Label htmlFor="category">Category</Label>
                   <Select
                     value={formData.category}
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
+                    onValueChange={(value) =>
+                      setFormData(prev => ({ ...prev, category: value }))
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select a category" />
                     </SelectTrigger>
                     <SelectContent>
-                      {categories.map((category) => (
+                      {categories.map(category => (
                         <SelectItem key={category} value={category}>
                           {category}
                         </SelectItem>
@@ -228,17 +242,6 @@ export default function AdminPage() {
                     />
                   </div>
 
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="authorBio">Author Bio</Label>
-                    <Textarea
-                      id="authorBio"
-                      name="authorBio"
-                      value={formData.authorBio}
-                      onChange={handleChange}
-                      placeholder="Enter author bio"
-                      required
-                    />
-                  </div>
                 </div>
               </div>
 

@@ -29,28 +29,28 @@ export default function FeaturedPost({ post }: FeaturedPostProps) {
         <div className="relative lg:w-5/12 p-6 lg:p-8 flex flex-col h-full">
           <div className="mb-4 flex flex-wrap gap-2">
             <Badge className="bg-primary hover:bg-primary/90">Featured</Badge>
-            {post.categories.map(category => (
-              <Badge key={category} variant="secondary" className="hover:bg-secondary/80">
-                {category}
+            {post.category && ( // Conditionally render if category exists
+              <Badge key={post.category} variant="secondary" className="hover:bg-secondary/80">
+                {post.category}
               </Badge>
-            ))}
+            )}
           </div>
-          
+
           <h2 className="text-3xl font-bold mb-4 group-hover:text-primary transition-colors">
-            <Link href={`/blog/${post.slug}`}>
+            <Link href={`/blog/${post.id}`}> {/* Use post.id for link */}
               {post.title}
             </Link>
           </h2>
-          
+
           <p className="text-muted-foreground mb-6">{post.excerpt}</p>
-          
+
           <div className="flex items-center space-x-4 mb-6 mt-auto">
             <Avatar>
-              <AvatarImage src={post.author.image} alt={post.author.name} />
-              <AvatarFallback>{post.author.name.charAt(0)}</AvatarFallback>
+              <AvatarImage src={post.authorImage} alt={post.authorName} /> {/* Use authorImage */}
+               <AvatarFallback>{post.authorName ? post.authorName.charAt(0) : ''}</AvatarFallback> {/* Use authorName */}
             </Avatar>
             <div>
-              <p className="font-medium text-sm">{post.author.name}</p>
+              <p className="font-medium text-sm">{post.authorName}</p> {/* Use authorName */}
               <div className="flex items-center text-xs text-muted-foreground">
                 <Calendar className="mr-1 h-3 w-3" />
                 <time dateTime={post.date}>{new Date(post.date).toLocaleDateString('en-US', {
@@ -58,18 +58,16 @@ export default function FeaturedPost({ post }: FeaturedPostProps) {
                   month: 'short',
                   day: 'numeric'
                 })}</time>
-                <span className="mx-1">•</span>
-                <Clock className="mr-1 h-3 w-3" />
-                <span>{post.readingTime} min read</span>
+                {/* Removed readingTime */}
               </div>
             </div>
           </div>
-          
-          <Button 
-            asChild 
+
+          <Button
+            asChild
             className="group/button w-fit"
           >
-            <Link href={`/blog/${post.slug}`}>
+            <Link href={`/blog/${post.id}`}> {/* Use post.id for link */}
               Read article
               <ArrowRight className="ml-2 h-4 w-4 group-hover/button:translate-x-1 transition-transform" />
             </Link>

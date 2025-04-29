@@ -6,7 +6,6 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
-import { useCarousel } from "@/hooks/use-carousel";
 import FeaturedPost from './FeaturedPost';
 import { BlogPost } from '@/lib/blog-types';
 
